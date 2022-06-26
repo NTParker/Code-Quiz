@@ -155,10 +155,8 @@ function endQuiz(timeout = false) {
   } 
             <h2>You answered ${score}/${
     quizData.length
-  } questions correctly</h2>
-            <button onclick="location.reload()">Reload</button>
-            `;
-  checkIfHighScore();
+  } questions correctly</h2>`;
+  setTimeout(checkIfHighScore, 3000);
 }
 
 function saveHighScore() {
