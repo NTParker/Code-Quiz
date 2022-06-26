@@ -95,21 +95,164 @@ const b_text = document.getElementById("b_text");
 const c_text = document.getElementById("c_text");
 const d_text = document.getElementById("d_text");
 const submitBtn = document.getElementById("submit");
+const timer = document.getElementById("timer");
+const mins = document.getElementById("mins");
+const secs = document.getElementById("secs");
 
-let currentQuiz = 0;
+let currentQuestion = 0;
 let score = 0;
 
-welcomePage();
-loadQuiz();
+let started = false;
+let timeoutTime;
 
-function welcomePage() {
+const NO_OF_HIGH_SCORES = 10;
+let highScores;
+let highScoreString;
+let lowestScore;
+let savedHS = false;
+
+welcome();
+
+function welcome() {
+  submitBtn.onclick = buttonClick;
   questionEl.innerText = "Welcome to My Coding Quiz!";
+  hideAnswerElements();
+  submitBtn.innerText = "Begin Quiz";
 }
 
-function loadQuiz() {
+function deductTime() {
+  timeoutTime = timeoutTime - 10000;
+}
+
+function buttonClick() {
+  const answer = getSelected();
+  if (!started) {
+    started = true;
+    submitBtn.innerText = "Submit";
+    startTheTimer();
+    loadQuestion();
+  }
+  if (answer) {
+    if (answer === quizData[currentQuestion].correct) {
+      score++;
+    } else {
+      deductTime();
+    }
+
+    currentQuestion++;
+
+    if (currentQuestion < quizData.length) {
+      loadQuestion();
+    } else {
+      endQuiz();
+    }
+  }
+}
+
+function endQuiz(timeout = false) {
+  quiz.innerHTML = `${
+    timeout ? `<h2 id="timeout">You Ran Out of Time</h2>` : ""
+  } 
+            <h2>You answered ${score}/${
+    quizData.length
+  } questions correctly</h2>
+            <button onclick="location.reload()">Reload</button>
+            `;
+  checkIfHighScore();
+}
+
+function saveHighScore() {
+  const name = prompt("You got a high score! Enter your initials: ");
+  const newHighScore = { score, name };
+
+  highScores.push(newHighScore);
+  highScores.sort((s1, s2) => s2.score - s1.score);
+  highScores.splice(NO_OF_HIGH_SCORES);
+
+  localStorage.setItem("highScores", JSON.stringify(highScores));
+
+  savedHS = true;
+}
+
+function getHighScores() {
+  highScoreString = localStorage.getItem("highScores");
+  highScores = JSON.parse(highScoreString) ?? [];
+  lowestScore = highScores[NO_OF_HIGH_SCORES - 1]?.score ?? 0;
+}
+
+function checkIfHighScore() {
+  getHighScores();
+  if (score > lowestScore && !savedHS) {
+    saveHighScore();
+  }
+  showHighScores();
+}
+
+function showHighScores() {
+  getHighScores();
+  // questionEl.innerText = "HIGH SCORES";
+  const hsDisplay = document.createElement("div");
+  const hsHeader = document.createElement("h2");
+  hsHeader.innerText = "HIGH SCORES";
+  hsDisplay.appendChild(hsHeader);
+  const hsList = document.createElement("ul");
+  highScores.forEach((highScore, i) => {
+    const row = document.createElement("li");
+    row.innerText = `${i + 1}: ${highScore.name} - ${highScore.score}`;
+    hsList.appendChild(row);
+  });
+  // document.replaceChild(answerEls, hsList);
+  // document.replaceChild(
+  //   submitBtn,
+  //   '<button onclick="location.reload()">RELOAD</button>'
+  // );
+  hsDisplay.appendChild(hsList);
+  quiz.innerHTML = "";
+  let reloadBtn = document.createElement("div");
+  reloadBtn.innerHTML = '<button onclick="location.reload()">Reload</button>';
+  quiz.appendChild(hsDisplay);
+  quiz.appendChild(reloadBtn);
+}
+
+function startTheTimer() {
+  let minutes = 5;
+  let seconds = 0;
+  let lag = 2000;
+  timeoutTime = new Date().getTime() + minutes * 60000 + seconds * 1000 + lag;
+
+  // Run myfunc every second
+  let myfunc = setInterval(function () {
+    let now = new Date().getTime();
+    let timeleft = timeoutTime - now;
+
+    // Calculating the time left
+    let displayMinutes = Math.floor(
+      (timeleft % (1000 * 60 * 60)) / (1000 * 60)
+    );
+    if (displayMinutes < 10) {
+      displayMinutes = "0" + displayMinutes;
+    }
+    let displaySeconds = Math.floor((timeleft % (1000 * 60)) / 1000);
+    if (displaySeconds < 10) {
+      displaySeconds = " 0" + displaySeconds;
+    }
+
+    // Result is output to the specific element
+    mins.innerHTML = displayMinutes + " : ";
+    secs.innerHTML = displaySeconds;
+
+    // Display the message when countdown is over
+    if (timeleft <= 0) {
+      clearInterval(myfunc);
+      endQuiz(true);
+    }
+  }, 1000);
+}
+
+function loadQuestion() {
   deselectAnswers();
 
-  const currentQuizData = quizData[currentQuiz];
+  const currentQuizData = quizData[currentQuestion];
 
   questionEl.innerText = currentQuizData.question;
   a_text.innerText = currentQuizData.a;
@@ -118,8 +261,19 @@ function loadQuiz() {
   d_text.innerText = currentQuizData.d;
 }
 
+function hideAnswerElements() {
+  a_text.innerText = "";
+  b_text.innerText = "";
+  c_text.innerText = "";
+  d_text.innerText = "";
+  answerEls.forEach((answerElement) => (answerElement.hidden = true));
+}
+
 function deselectAnswers() {
-  answerEls.forEach((answerEl) => (answerEl.checked = false));
+  answerEls.forEach((answerEl) => {
+    answerEl.checked = false;
+    if (answerEl.hidden) answerEl.hidden = false;
+  });
 }
 
 function getSelected() {
@@ -132,23 +286,17 @@ function getSelected() {
   return answer;
 }
 
-submitBtn.addEventListener("click", () => {
-  const answer = getSelected();
-  if (answer) {
-    if (answer === quizData[currentQuiz].correct) {
-      score++;
-    }
-
-    currentQuiz++;
-
-    if (currentQuiz < quizData.length) {
-      loadQuiz();
-    } else {
-      quiz.innerHTML = `
-            <h2>You answered ${score}/${quizData.length} questions correctly</h2>
-
-            <button onclick="location.reload()">Reload</button>
-            `;
-    }
+function populateFakeHighScores() {
+  let alph = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  let ret = [];
+  for (let i = 0; i < 10; i++) {
+    const val = {
+      score: Math.floor(Math.random() * 10) + 1,
+      name:
+        alph[Math.floor(Math.random() * 26)] +
+        alph[Math.floor(Math.random() * 26)],
+    };
+    ret.push(val);
   }
-});
+  return ret;
+}

@@ -26,6 +26,22 @@ body{
 .quiz-header{
     padding: 4rem;
 }
+#timer {
+    display: flex;
+    justify-content: center;
+  }
+  #timeout {
+    text-decoration: red;
+  }
+  .scores {
+    display: flex;
+    justify-content: center;
+  }
+  p {
+    display: inline;
+    font-size: 40px;
+    margin-top: 0px;
+  }
 h2{
     padding: 1rem;
     text-align: center;
